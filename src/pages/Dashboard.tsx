@@ -17,6 +17,7 @@ interface Conversion {
   original_format: string;
   file_size: number;
   created_at: string;
+  storage_path: string | null;
 }
 
 interface UserPreferences {
@@ -114,6 +115,46 @@ const Dashboard = () => {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  const handleDownload = async (conversion: Conversion) => {
+    if (!conversion.storage_path) {
+      toast({
+        title: "Download unavailable",
+        description: "This file is no longer available for download.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.storage
+        .from("conversions")
+        .download(conversion.storage_path);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = conversion.original_filename.replace(/\.[^/.]+$/, "") + ".pdf";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download started",
+        description: "Your PDF is being downloaded.",
+      });
+    } catch (error) {
+      console.error("Download error:", error);
+      toast({
+        title: "Download failed",
+        description: "There was an error downloading the file.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-hero">
       {/* Header */}
@@ -198,9 +239,20 @@ const Dashboard = () => {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground shrink-0">
-                          <Calendar className="w-4 h-4" />
-                          {format(new Date(conversion.created_at), "MMM d, yyyy")}
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className="text-sm text-muted-foreground hidden sm:flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            {format(new Date(conversion.created_at), "MMM d, yyyy")}
+                          </span>
+                          {conversion.storage_path && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDownload(conversion)}
+                            >
+                              <Download className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}
