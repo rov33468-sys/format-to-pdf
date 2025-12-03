@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { FileUploader } from "@/components/FileUploader";
 import { ConversionProgress } from "@/components/ConversionProgress";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, Zap, Shield, Globe } from "lucide-react";
+import { Download, FileText, Zap, Shield, Globe, LogIn, LogOut, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { convertFileToPDF } from "@/lib/pdfConverter";
 import heroBg from "@/assets/hero-bg.jpg";
 
@@ -14,6 +16,15 @@ const Index = () => {
   const [convertedPDF, setConvertedPDF] = useState<Blob | null>(null);
   const [currentFileName, setCurrentFileName] = useState<string>("");
   const { toast } = useToast();
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast({
+      title: "Signed out",
+      description: "You have been signed out successfully.",
+    });
+  };
 
   const handleFilesSelected = (selectedFiles: File[]) => {
     setFiles(selectedFiles);
@@ -100,13 +111,32 @@ const Index = () => {
               PDFify
             </h1>
           </div>
-          <nav className="hidden md:flex gap-6">
+          <nav className="hidden md:flex items-center gap-6">
             <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
               Features
             </a>
             <a href="#how-it-works" className="text-muted-foreground hover:text-foreground transition-colors">
               How it Works
             </a>
+            {user ? (
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-muted-foreground flex items-center gap-1">
+                  <User className="w-4 h-4" />
+                  {user.email}
+                </span>
+                <Button variant="outline" size="sm" onClick={handleSignOut}>
+                  <LogOut className="w-4 h-4 mr-1" />
+                  Sign Out
+                </Button>
+              </div>
+            ) : (
+              <Link to="/auth">
+                <Button variant="outline" size="sm">
+                  <LogIn className="w-4 h-4 mr-1" />
+                  Sign In
+                </Button>
+              </Link>
+            )}
           </nav>
         </div>
       </header>
