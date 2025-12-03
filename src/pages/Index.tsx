@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Download, FileText, Zap, Shield, Globe, LogIn, LogOut, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { convertFileToPDF } from "@/lib/pdfConverter";
 import heroBg from "@/assets/hero-bg.jpg";
 
@@ -62,6 +63,19 @@ const Index = () => {
       clearInterval(progressInterval);
       setConversionProgress(100);
       setConvertedPDF(pdfBlob);
+
+      // Save conversion to database if user is logged in
+      if (user) {
+        const file = files[0];
+        const fileExtension = file.name.split('.').pop()?.toLowerCase() || 'unknown';
+        
+        await supabase.from("conversions").insert({
+          user_id: user.id,
+          original_filename: file.name,
+          original_format: fileExtension,
+          file_size: file.size,
+        });
+      }
 
       toast({
         title: "Conversion successful!",
