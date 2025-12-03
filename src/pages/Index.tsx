@@ -64,16 +64,31 @@ const Index = () => {
       setConversionProgress(100);
       setConvertedPDF(pdfBlob);
 
-      // Save conversion to database if user is logged in
+      // Save conversion to database and storage if user is logged in
       if (user) {
         const file = files[0];
         const fileExtension = file.name.split('.').pop()?.toLowerCase() || 'unknown';
+        const pdfFileName = file.name.replace(/\.[^/.]+$/, "") + ".pdf";
+        const storagePath = `${user.id}/${Date.now()}_${pdfFileName}`;
         
+        // Upload PDF to storage
+        const { error: uploadError } = await supabase.storage
+          .from("conversions")
+          .upload(storagePath, pdfBlob, {
+            contentType: "application/pdf",
+          });
+
+        if (uploadError) {
+          console.error("Storage upload error:", uploadError);
+        }
+        
+        // Save conversion record with storage path
         await supabase.from("conversions").insert({
           user_id: user.id,
           original_filename: file.name,
           original_format: fileExtension,
           file_size: file.size,
+          storage_path: uploadError ? null : storagePath,
         });
       }
 
