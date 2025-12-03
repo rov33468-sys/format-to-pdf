@@ -120,10 +120,10 @@ const Index = () => {
             </a>
             {user ? (
               <div className="flex items-center gap-4">
-                <span className="text-sm text-muted-foreground flex items-center gap-1">
+                <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
                   <User className="w-4 h-4" />
-                  {user.email}
-                </span>
+                  Dashboard
+                </Link>
                 <Button variant="outline" size="sm" onClick={handleSignOut}>
                   <LogOut className="w-4 h-4 mr-1" />
                   Sign Out
