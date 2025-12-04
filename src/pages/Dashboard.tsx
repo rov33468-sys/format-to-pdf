@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, ArrowLeft, Download, Calendar, FileImage, Settings, Loader2 } from "lucide-react";
+import { FileText, ArrowLeft, Download, Calendar, FileImage, Settings, Loader2, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 
 interface Conversion {
@@ -35,6 +35,7 @@ const Dashboard = () => {
   const [isLoadingConversions, setIsLoadingConversions] = useState(true);
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
   const [isSavingPreferences, setIsSavingPreferences] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -155,6 +156,45 @@ const Dashboard = () => {
     }
   };
 
+  const handleDelete = async (conversion: Conversion) => {
+    setDeletingId(conversion.id);
+    try {
+      // Delete from storage if file exists
+      if (conversion.storage_path) {
+        const { error: storageError } = await supabase.storage
+          .from("conversions")
+          .remove([conversion.storage_path]);
+
+        if (storageError) {
+          console.error("Storage delete error:", storageError);
+        }
+      }
+
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from("conversions")
+        .delete()
+        .eq("id", conversion.id);
+
+      if (dbError) throw dbError;
+
+      setConversions((prev) => prev.filter((c) => c.id !== conversion.id));
+      toast({
+        title: "Deleted",
+        description: "Conversion removed successfully.",
+      });
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast({
+        title: "Delete failed",
+        description: "There was an error deleting the conversion.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-hero">
       {/* Header */}
@@ -239,7 +279,7 @@ const Dashboard = () => {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3 shrink-0">
+                        <div className="flex items-center gap-2 shrink-0">
                           <span className="text-sm text-muted-foreground hidden sm:flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
                             {format(new Date(conversion.created_at), "MMM d, yyyy")}
@@ -253,6 +293,19 @@ const Dashboard = () => {
                               <Download className="w-4 h-4" />
                             </Button>
                           )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(conversion)}
+                            disabled={deletingId === conversion.id}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            {deletingId === conversion.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-4 h-4" />
+                            )}
+                          </Button>
                         </div>
                       </div>
                     ))}
